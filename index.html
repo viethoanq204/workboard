@@ -80,7 +80,8 @@
 
       .dragging {
         opacity: 0.45;
-        transform: rotate(2deg) scale(0.98);
+        transform: none;
+        transition: opacity 0.18s ease;
       }
 
       .drag-over {
@@ -191,6 +192,57 @@
       .custom-scroll::-webkit-scrollbar-track {
         background: transparent;
       }
+
+      .motion-icon {
+        display: inline-block;
+        transform-origin: center;
+        transition:
+          transform 0.22s ease,
+          filter 0.22s ease,
+          opacity 0.22s ease;
+      }
+
+      .motion-icon-wrap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .motion-icon-wrap:hover .motion-icon,
+      .column:hover .column-title-icon .motion-icon,
+      .task-card:hover .motion-icon {
+        transform: translateY(-2px) scale(1.08);
+        filter: drop-shadow(0 8px 14px rgba(168, 85, 247, 0.3));
+      }
+
+      .trash-bin-svg {
+        overflow: visible;
+      }
+
+      .trash-bin-svg .trash-lid-svg {
+        transform-box: fill-box;
+        transform-origin: 18px 8px;
+        transition: transform 0.24s ease;
+      }
+
+      .trash-active .trash-bin-svg .trash-lid-svg {
+        transform: rotate(-18deg) translate(-2px, -5px);
+      }
+
+      .trash-active .trash-bin-svg .trash-body-svg {
+        stroke: rgb(252 165 165);
+      }
+
+      .calendar-icon-svg {
+        transition:
+          transform 0.2s ease,
+          filter 0.2s ease;
+      }
+
+      .date-picker-display:hover .calendar-icon-svg {
+        transform: translateY(-1px) scale(1.05);
+        filter: drop-shadow(0 8px 12px rgba(96, 165, 250, 0.22));
+      }
     </style>
   </head>
 
@@ -253,7 +305,24 @@
               placeholder="Tìm công việc theo tiêu đề, mô tả, tag..."
               class="w-full rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 pl-11 outline-none focus:border-purple-400/70"
             />
-            <span class="absolute left-4 top-3.5 text-slate-400">⌕</span>
+            <span
+              class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="h-4 w-4"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M20 20l-3.5-3.5"></path>
+              </svg>
+            </span>
           </div>
 
           <select
@@ -299,22 +368,36 @@
           id="trashZone"
           class="trash-zone glass flex items-center gap-4 rounded-3xl px-6 py-4 shadow-soft border border-red-400/30"
         >
-          <div class="relative h-12 w-12">
-            <div
-              class="trash-lid absolute left-2 top-1 h-2 w-8 rounded bg-red-300"
-            ></div>
-            <div
-              class="absolute left-3 top-4 h-8 w-7 rounded-b-lg border-2 border-red-300"
-            ></div>
-            <div
-              class="absolute left-[22px] top-5 h-6 w-[2px] bg-red-300/80"
-            ></div>
-            <div
-              class="absolute left-[14px] top-5 h-6 w-[2px] bg-red-300/80"
-            ></div>
-            <div
-              class="absolute left-[30px] top-5 h-6 w-[2px] bg-red-300/80"
-            ></div>
+          <div
+            class="motion-icon-wrap h-12 w-12 rounded-2xl bg-red-500/10 text-red-200"
+          >
+            <svg
+              class="trash-bin-svg h-9 w-9"
+              viewBox="0 0 48 48"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                class="trash-lid-svg"
+                d="M15 13h18M20 9h8"
+                stroke="currentColor"
+                stroke-width="3.2"
+                stroke-linecap="round"
+              ></path>
+              <path
+                class="trash-body-svg"
+                d="M17 17h14l-1.1 19.2A4 4 0 0 1 25.9 40h-3.8a4 4 0 0 1-4-3.8L17 17Z"
+                stroke="currentColor"
+                stroke-width="3.2"
+                stroke-linejoin="round"
+              ></path>
+              <path
+                d="M21.5 22.5v11M26.5 22.5v11"
+                stroke="currentColor"
+                stroke-width="2.8"
+                stroke-linecap="round"
+              ></path>
+            </svg>
           </div>
           <div>
             <p class="font-bold text-red-100">Thùng rác</p>
@@ -441,7 +524,41 @@
                 <span id="taskDueText" class="text-slate-400"
                   >Chọn ngày deadline</span
                 >
-                <span class="text-lg text-slate-400">📅</span>
+                <span class="text-slate-400" aria-hidden="true">
+                  <svg
+                    class="calendar-icon-svg h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <rect
+                      x="4"
+                      y="5.5"
+                      width="16"
+                      height="14.5"
+                      rx="3.2"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    ></rect>
+                    <path
+                      d="M4.5 10h15"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    ></path>
+                    <path
+                      d="M8.2 4v3M15.8 4v3"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    ></path>
+                    <path
+                      d="M8.5 13.5h.01M12 13.5h.01M15.5 13.5h.01M8.5 16.5h.01M12 16.5h.01"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                    ></path>
+                  </svg>
+                </span>
               </button>
 
               <div id="datePickerPanel" class="date-picker-panel hidden">
@@ -526,9 +643,33 @@
     >
       <div class="modal-show glass w-full max-w-md rounded-3xl p-6 shadow-soft">
         <div
-          class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15 text-3xl"
+          class="mb-4 motion-icon-wrap flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15 text-red-200"
         >
-          🗑️
+          <svg
+            class="motion-icon h-8 w-8"
+            viewBox="0 0 48 48"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M15 13h18M20 9h8"
+              stroke="currentColor"
+              stroke-width="3.2"
+              stroke-linecap="round"
+            ></path>
+            <path
+              d="M17 17h14l-1.1 19.2A4 4 0 0 1 25.9 40h-3.8a4 4 0 0 1-4-3.8L17 17Z"
+              stroke="currentColor"
+              stroke-width="3.2"
+              stroke-linejoin="round"
+            ></path>
+            <path
+              d="M21.5 22.5v11M26.5 22.5v11"
+              stroke="currentColor"
+              stroke-width="2.8"
+              stroke-linecap="round"
+            ></path>
+          </svg>
         </div>
 
         <h2 id="confirmTitle" class="text-2xl font-black">Xác nhận xoá</h2>
@@ -565,32 +706,80 @@
     <script>
       const STORAGE_KEY = "workboard_tasks_v1";
 
+      const icons = {
+        todo: `
+          <span class="motion-icon-wrap text-rose-300" aria-hidden="true">
+            <svg class="motion-icon h-6 w-6" viewBox="0 0 24 24" fill="none">
+              <path d="M7 4h7.2c1.1 0 2 .9 2 2v.8l1.9.6c.6.2 1 .8 1 1.4v1.1c0 .8-.7 1.5-1.5 1.5H13l-.8 7.4c-.1.8-.8 1.3-1.5 1.1-.5-.1-.9-.6-1-1.1L8.8 11.4H6.4c-.8 0-1.5-.7-1.5-1.5V6.1C4.9 4.9 5.8 4 7 4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M14.2 6.8h3.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </span>
+        `,
+        research: `
+          <span class="motion-icon-wrap text-sky-300" aria-hidden="true">
+            <svg class="motion-icon h-6 w-6" viewBox="0 0 24 24" fill="none">
+              <circle cx="10.5" cy="10.5" r="5.8" stroke="currentColor" stroke-width="1.9"/>
+              <path d="m15 15 4.5 4.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M8.4 10.3h4.2M10.5 8.2v4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+          </span>
+        `,
+        doing: `
+          <span class="motion-icon-wrap text-amber-300" aria-hidden="true">
+            <svg class="motion-icon h-6 w-6" viewBox="0 0 24 24" fill="none">
+              <path d="M13.5 2.8 5.9 13h5.5l-.9 8.2 7.6-10.2h-5.4l.8-8.2Z" fill="currentColor"/>
+            </svg>
+          </span>
+        `,
+        done: `
+          <span class="motion-icon-wrap text-emerald-300" aria-hidden="true">
+            <svg class="motion-icon h-6 w-6" viewBox="0 0 24 24" fill="none">
+              <rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.9"/>
+              <path d="m8 12.3 2.6 2.6L16.5 9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        `,
+        edit: `
+          <svg class="motion-icon h-4 w-4 text-orange-300" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 18.8 6.1 14 15.4 4.7a2.1 2.1 0 0 1 3 0l.9.9a2.1 2.1 0 0 1 0 3L10 17.9 5 18.8Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+            <path d="m14.2 6 3.8 3.8" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          </svg>
+        `,
+        empty: `
+          <svg class="motion-icon mx-auto mb-2 h-8 w-8 text-slate-500" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 7.5h14v10A2.5 2.5 0 0 1 16.5 20h-9A2.5 2.5 0 0 1 5 17.5v-10Z" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M8 7.5V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1.5" stroke="currentColor" stroke-width="1.7"/>
+            <path d="M9 12h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        `,
+      };
+
       const columns = [
         {
           id: "todo",
           title: "Cần Làm",
-          icon: "📌",
+          icon: icons.todo,
           color: "from-slate-400 to-slate-200",
           hint: "Việc mới, cần xử lý",
         },
         {
           id: "research",
           title: "Đang nghiên cứu",
-          icon: "🔎",
+          icon: icons.research,
           color: "from-cyan-400 to-blue-300",
           hint: "Đang tìm hiểu, phân tích",
         },
         {
           id: "doing",
           title: "Đang Làm",
-          icon: "⚡",
+          icon: icons.doing,
           color: "from-purple-400 to-fuchsia-300",
           hint: "Đang thực hiện",
         },
         {
           id: "done",
           title: "Đã Làm",
-          icon: "✅",
+          icon: icons.done,
           color: "from-emerald-400 to-lime-300",
           hint: "Hoàn thành",
         },
@@ -626,6 +815,9 @@
       let pendingConfirmAction = null;
       let draggedTaskId = null;
       let dropHandled = false;
+      let dragScrollFrame = null;
+      let dragPointerY = 0;
+      let dragScrollContainer = null;
       let datePickerMonth = new Date();
 
       const board = document.getElementById("board");
@@ -873,7 +1065,7 @@
                 <p class="text-sm text-slate-400">${col.title}</p>
                 <p class="mt-1 text-3xl font-black">${count}</p>
               </div>
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/8 text-2xl">
+              <div class="motion-icon-wrap flex h-12 w-12 items-center justify-center rounded-2xl bg-white/8">
                 ${col.icon}
               </div>
             </div>
@@ -900,7 +1092,7 @@
             <div class="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 class="flex items-center gap-2 text-xl font-black">
-                  <span>${col.icon}</span>
+                  <span class="column-title-icon">${col.icon}</span>
                   <span>${col.title}</span>
                 </h2>
                 <p class="mt-1 text-sm text-slate-400">${col.hint}</p>
@@ -917,7 +1109,7 @@
                   ? colTasks.map(renderTaskCard).join("")
                   : `
                     <div class="empty-state rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-slate-500">
-                      <div class="text-3xl mb-2">✨</div>
+                      <div class="motion-icon-wrap">${icons.empty}</div>
                       <p class="text-sm">Chưa có công việc</p>
                     </div>
                   `
@@ -955,7 +1147,7 @@
                 data-id="${task.id}"
                 title="Sửa"
               >
-                ✏️
+                ${icons.edit}
               </button>
             </div>
           </div>
@@ -1137,6 +1329,90 @@
         });
       }
 
+      function stopDragAutoScroll() {
+        if (dragScrollFrame) {
+          cancelAnimationFrame(dragScrollFrame);
+          dragScrollFrame = null;
+        }
+
+        dragScrollContainer = null;
+      }
+
+      function getScrollSpeed(distanceToEdge, threshold) {
+        const ratio = Math.max(0, (threshold - distanceToEdge) / threshold);
+        return Math.ceil(4 + ratio * 18);
+      }
+
+      function autoScrollWhileDragging() {
+        if (!draggedTaskId) {
+          stopDragAutoScroll();
+          return;
+        }
+
+        const viewportThreshold = 90;
+        const listThreshold = 70;
+        const viewportHeight = window.innerHeight;
+
+        if (dragPointerY < viewportThreshold) {
+          window.scrollBy(0, -getScrollSpeed(dragPointerY, viewportThreshold));
+        } else if (viewportHeight - dragPointerY < viewportThreshold) {
+          window.scrollBy(
+            0,
+            getScrollSpeed(viewportHeight - dragPointerY, viewportThreshold),
+          );
+        }
+
+        if (dragScrollContainer) {
+          const rect = dragScrollContainer.getBoundingClientRect();
+          const distanceTop = dragPointerY - rect.top;
+          const distanceBottom = rect.bottom - dragPointerY;
+
+          if (distanceTop >= 0 && distanceTop < listThreshold) {
+            dragScrollContainer.scrollTop -= getScrollSpeed(
+              distanceTop,
+              listThreshold,
+            );
+          } else if (distanceBottom >= 0 && distanceBottom < listThreshold) {
+            dragScrollContainer.scrollTop += getScrollSpeed(
+              distanceBottom,
+              listThreshold,
+            );
+          }
+        }
+
+        dragScrollFrame = requestAnimationFrame(autoScrollWhileDragging);
+      }
+
+      function startDragAutoScroll(e, container = null) {
+        dragPointerY = e.clientY;
+        dragScrollContainer = container;
+
+        if (!dragScrollFrame) {
+          dragScrollFrame = requestAnimationFrame(autoScrollWhileDragging);
+        }
+      }
+
+      function handleTaskDropOnList(e, list) {
+        e.preventDefault();
+        dropHandled = true;
+        stopDragAutoScroll();
+
+        const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+        const status = list.dataset.status;
+        const orderedIds = [...list.querySelectorAll(".task-card")].map(
+          (card) => card.dataset.id,
+        );
+
+        document
+          .querySelectorAll(".column")
+          .forEach((col) => col.classList.remove("drag-over"));
+        trashZone.classList.remove("trash-active");
+
+        if (taskId && status) {
+          applyTaskDrop(taskId, status, orderedIds);
+        }
+      }
+
       function bindDragEvents() {
         document.querySelectorAll(".task-card").forEach((card) => {
           card.addEventListener("dragstart", (e) => {
@@ -1149,6 +1425,7 @@
 
           card.addEventListener("dragend", () => {
             card.classList.remove("dragging");
+            stopDragAutoScroll();
             draggedTaskId = null;
             document
               .querySelectorAll(".column")
@@ -1164,6 +1441,8 @@
         document.querySelectorAll(".column").forEach((column) => {
           column.addEventListener("dragover", (e) => {
             e.preventDefault();
+            const list = column.querySelector(".task-list");
+            startDragAutoScroll(e, list);
             column.classList.add("drag-over");
           });
 
@@ -1172,11 +1451,19 @@
               column.classList.remove("drag-over");
             }
           });
+
+          column.addEventListener("drop", (e) => {
+            if (e.target.closest(".task-list")) return;
+
+            const list = column.querySelector(".task-list");
+            if (list) handleTaskDropOnList(e, list);
+          });
         });
 
         document.querySelectorAll(".task-list").forEach((list) => {
           list.addEventListener("dragover", (e) => {
             e.preventDefault();
+            startDragAutoScroll(e, list);
             const draggingCard = document.querySelector(".task-card.dragging");
             if (!draggingCard) return;
 
@@ -1184,9 +1471,13 @@
             if (emptyState) emptyState.classList.add("hidden");
 
             const afterElement = getDragAfterElement(list, e.clientY);
+            const currentNext = draggingCard.nextElementSibling;
+
             if (afterElement == null) {
-              list.appendChild(draggingCard);
-            } else {
+              if (list.lastElementChild !== draggingCard) {
+                list.appendChild(draggingCard);
+              }
+            } else if (currentNext !== afterElement) {
               list.insertBefore(draggingCard, afterElement);
             }
 
@@ -1194,24 +1485,7 @@
           });
 
           list.addEventListener("drop", (e) => {
-            e.preventDefault();
-            dropHandled = true;
-
-            const taskId =
-              e.dataTransfer.getData("text/plain") || draggedTaskId;
-            const status = list.dataset.status;
-            const orderedIds = [...list.querySelectorAll(".task-card")].map(
-              (card) => card.dataset.id,
-            );
-
-            document
-              .querySelectorAll(".column")
-              .forEach((col) => col.classList.remove("drag-over"));
-            trashZone.classList.remove("trash-active");
-
-            if (taskId && status) {
-              applyTaskDrop(taskId, status, orderedIds);
-            }
+            handleTaskDropOnList(e, list);
           });
         });
 
@@ -1226,6 +1500,7 @@
 
       trashZone.addEventListener("dragover", (e) => {
         e.preventDefault();
+        stopDragAutoScroll();
         trashZone.classList.add("trash-active");
       });
 
@@ -1235,6 +1510,7 @@
 
       trashZone.addEventListener("drop", (e) => {
         e.preventDefault();
+        stopDragAutoScroll();
         trashZone.classList.remove("trash-active");
 
         const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
