@@ -124,6 +124,61 @@
         }
       }
 
+      .date-picker-wrap {
+        position: relative;
+      }
+
+      .date-picker-display {
+        cursor: pointer;
+      }
+
+      .date-picker-panel {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: calc(100% + 10px);
+        z-index: 70;
+        border-radius: 24px;
+        background: rgba(15, 23, 42, 0.98);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+        padding: 16px;
+      }
+
+      .date-day {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 38px;
+        border-radius: 14px;
+        color: rgb(226 232 240);
+        font-size: 14px;
+        transition: 0.16s ease;
+      }
+
+      .date-day:hover {
+        background: rgba(168, 85, 247, 0.18);
+      }
+
+      .date-day-muted {
+        color: rgb(100 116 139);
+      }
+
+      .date-day-selected {
+        background: linear-gradient(135deg, #a855f7, #3b82f6);
+        color: white;
+        font-weight: 800;
+        box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
+      }
+
+      .date-day-today {
+        border: 1px solid rgba(168, 85, 247, 0.55);
+      }
+
+      .empty-state {
+        pointer-events: none;
+      }
+
       .custom-scroll::-webkit-scrollbar {
         width: 8px;
       }
@@ -275,7 +330,7 @@
       class="fixed inset-0 z-50 hidden items-center justify-center bg-black/65 px-4"
     >
       <div
-        class="modal-show glass w-full max-w-2xl rounded-3xl p-6 shadow-soft"
+        class="modal-show glass max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl p-6 shadow-soft"
       >
         <div class="flex items-start justify-between gap-4 mb-5">
           <div>
@@ -316,10 +371,10 @@
             >
             <textarea
               id="taskDesc"
-              rows="4"
-              maxlength="350"
-              placeholder="Mô tả ngắn về công việc..."
-              class="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+              rows="7"
+              maxlength="3000"
+              placeholder="Mô tả chi tiết về công việc..."
+              class="min-h-[180px] w-full resize-y rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
             ></textarea>
           </div>
 
@@ -376,11 +431,70 @@
             <label class="mb-2 block text-sm font-semibold text-slate-300"
               >Deadline</label
             >
-            <input
-              id="taskDue"
-              type="date"
-              class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
-            />
+            <div class="date-picker-wrap">
+              <input id="taskDue" type="hidden" />
+              <button
+                id="taskDueDisplay"
+                type="button"
+                class="date-picker-display flex w-full items-center justify-between rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 text-left outline-none transition hover:border-purple-400/50 focus:border-purple-400/70"
+              >
+                <span id="taskDueText" class="text-slate-400"
+                  >Chọn ngày deadline</span
+                >
+                <span class="text-lg text-slate-400">📅</span>
+              </button>
+
+              <div id="datePickerPanel" class="date-picker-panel hidden">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                  <button
+                    id="prevMonthBtn"
+                    type="button"
+                    class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 transition"
+                  >
+                    ‹
+                  </button>
+                  <p
+                    id="datePickerTitle"
+                    class="font-extrabold text-slate-100"
+                  ></p>
+                  <button
+                    id="nextMonthBtn"
+                    type="button"
+                    class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 transition"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div
+                  class="mb-2 grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500"
+                >
+                  <span>T2</span><span>T3</span><span>T4</span><span>T5</span
+                  ><span>T6</span><span>T7</span><span>CN</span>
+                </div>
+
+                <div id="datePickerDays" class="grid grid-cols-7 gap-1"></div>
+
+                <div
+                  class="mt-4 flex justify-between gap-3 border-t border-white/10 pt-4"
+                >
+                  <button
+                    id="clearDateBtn"
+                    type="button"
+                    class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10 transition"
+                  >
+                    Xoá ngày
+                  </button>
+                  <button
+                    id="todayDateBtn"
+                    type="button"
+                    class="rounded-xl bg-purple-500/20 px-3 py-2 text-sm font-bold text-purple-100 hover:bg-purple-500/30 transition"
+                  >
+                    Hôm nay
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div
@@ -511,6 +625,8 @@
       let taskToDelete = null;
       let pendingConfirmAction = null;
       let draggedTaskId = null;
+      let dropHandled = false;
+      let datePickerMonth = new Date();
 
       const board = document.getElementById("board");
       const stats = document.getElementById("stats");
@@ -530,6 +646,16 @@
       const searchInput = document.getElementById("searchInput");
       const tagFilter = document.getElementById("tagFilter");
       const sortSelect = document.getElementById("sortSelect");
+      const taskDue = document.getElementById("taskDue");
+      const taskDueDisplay = document.getElementById("taskDueDisplay");
+      const taskDueText = document.getElementById("taskDueText");
+      const datePickerPanel = document.getElementById("datePickerPanel");
+      const datePickerTitle = document.getElementById("datePickerTitle");
+      const datePickerDays = document.getElementById("datePickerDays");
+      const prevMonthBtn = document.getElementById("prevMonthBtn");
+      const nextMonthBtn = document.getElementById("nextMonthBtn");
+      const clearDateBtn = document.getElementById("clearDateBtn");
+      const todayDateBtn = document.getElementById("todayDateBtn");
 
       function uid() {
         return "task_" + Date.now() + "_" + Math.random().toString(16).slice(2);
@@ -549,6 +675,7 @@
               priority: "high",
               due: "",
               createdAt: Date.now() - 500000,
+              order: Date.now() - 500000,
             },
             {
               id: uid(),
@@ -559,6 +686,7 @@
               priority: "medium",
               due: "",
               createdAt: Date.now() - 300000,
+              order: Date.now() - 300000,
             },
           ];
           saveTasks();
@@ -567,9 +695,22 @@
 
         try {
           tasks = JSON.parse(raw) || [];
+          migrateTaskOrders();
         } catch {
           tasks = [];
         }
+      }
+
+      function migrateTaskOrders() {
+        let changed = false;
+
+        tasks = tasks.map((task) => {
+          if (typeof task.order === "number") return task;
+          changed = true;
+          return { ...task, order: task.createdAt || Date.now() };
+        });
+
+        if (changed) saveTasks();
       }
 
       function saveTasks() {
@@ -606,6 +747,81 @@
         return date.toLocaleDateString("vi-VN");
       }
 
+      function toDateValue(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function updateDueDisplay() {
+        if (!taskDue.value) {
+          taskDueText.textContent = "Chọn ngày deadline";
+          taskDueText.className = "text-slate-400";
+          return;
+        }
+
+        taskDueText.textContent = formatDate(taskDue.value);
+        taskDueText.className = "text-slate-100";
+      }
+
+      function renderDatePicker() {
+        const year = datePickerMonth.getFullYear();
+        const month = datePickerMonth.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const firstGridDay = new Date(firstDay);
+        const offset = (firstDay.getDay() + 6) % 7;
+
+        firstGridDay.setDate(firstDay.getDate() - offset);
+        datePickerTitle.textContent = `Tháng ${month + 1} / ${year}`;
+
+        const todayValue = toDateValue(new Date());
+        const selectedValue = taskDue.value;
+        const days = [];
+
+        for (let i = 0; i < 42; i++) {
+          const current = new Date(firstGridDay);
+          current.setDate(firstGridDay.getDate() + i);
+
+          const value = toDateValue(current);
+          const isCurrentMonth = current.getMonth() === month;
+          const isToday = value === todayValue;
+          const isSelected = value === selectedValue;
+
+          days.push(`
+            <button
+              type="button"
+              class="date-day ${isCurrentMonth ? "" : "date-day-muted"} ${isToday ? "date-day-today" : ""} ${isSelected ? "date-day-selected" : ""}"
+              data-date="${value}"
+            >
+              ${current.getDate()}
+            </button>
+          `);
+        }
+
+        datePickerDays.innerHTML = days.join("");
+
+        datePickerDays.querySelectorAll("button").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            taskDue.value = btn.dataset.date;
+            updateDueDisplay();
+            closeDatePicker();
+          });
+        });
+      }
+
+      function openDatePicker() {
+        datePickerMonth = taskDue.value
+          ? new Date(taskDue.value + "T00:00:00")
+          : new Date();
+        renderDatePicker();
+        datePickerPanel.classList.remove("hidden");
+      }
+
+      function closeDatePicker() {
+        datePickerPanel.classList.add("hidden");
+      }
+
       function isOverdue(task) {
         if (!task.due || task.status === "done") return false;
         const today = new Date();
@@ -639,7 +855,7 @@
             return order[b.priority] - order[a.priority];
           }
 
-          return b.createdAt - a.createdAt;
+          return (b.order || b.createdAt) - (a.order || a.createdAt);
         });
 
         return result;
@@ -700,7 +916,7 @@
                 colTasks.length
                   ? colTasks.map(renderTaskCard).join("")
                   : `
-                    <div class="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-slate-500">
+                    <div class="empty-state rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-slate-500">
                       <div class="text-3xl mb-2">✨</div>
                       <p class="text-sm">Chưa có công việc</p>
                     </div>
@@ -790,6 +1006,8 @@
         document.getElementById("taskPriority").value =
           task?.priority || "medium";
         document.getElementById("taskDue").value = task?.due || "";
+        updateDueDisplay();
+        closeDatePicker();
 
         taskModal.classList.remove("hidden");
         taskModal.classList.add("flex");
@@ -803,6 +1021,8 @@
         taskModal.classList.add("hidden");
         taskModal.classList.remove("flex");
         taskForm.reset();
+        closeDatePicker();
+        updateDueDisplay();
       }
 
       function openConfirmModal(options = {}) {
@@ -854,22 +1074,74 @@
         showToast("Đã xoá công việc.");
       }
 
-      function updateTaskStatus(taskId, status) {
+      function updateColumnOrder(status, orderedIds) {
+        const baseOrder = Date.now();
+
+        orderedIds.forEach((id, index) => {
+          const task = tasks.find((t) => t.id === id);
+          if (task) task.order = baseOrder - index;
+        });
+      }
+
+      function applyTaskDrop(taskId, status, orderedIds) {
         const task = tasks.find((t) => t.id === taskId);
         if (!task) return;
 
+        const oldStatus = task.status;
         task.status = status;
+
+        const normalizedIds = orderedIds.includes(taskId)
+          ? orderedIds
+          : [...orderedIds, taskId];
+
+        updateColumnOrder(status, normalizedIds);
         saveTasks();
         render();
-        showToast(
-          `Đã chuyển sang "${columns.find((c) => c.id === status)?.title}".`,
-        );
+
+        if (oldStatus !== status) {
+          showToast(
+            `Đã chuyển sang "${columns.find((c) => c.id === status)?.title}".`,
+          );
+        } else {
+          showToast("Đã sắp xếp lại công việc.");
+        }
+      }
+
+      function getDragAfterElement(container, y) {
+        const draggableElements = [
+          ...container.querySelectorAll(".task-card:not(.dragging)"),
+        ];
+
+        return draggableElements.reduce(
+          (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+              return { offset, element: child };
+            }
+
+            return closest;
+          },
+          { offset: Number.NEGATIVE_INFINITY, element: null },
+        ).element;
+      }
+
+      function syncEmptyStates() {
+        document.querySelectorAll(".task-list").forEach((list) => {
+          const emptyState = list.querySelector(".empty-state");
+          if (!emptyState) return;
+
+          const hasCards = list.querySelector(".task-card");
+          emptyState.classList.toggle("hidden", Boolean(hasCards));
+        });
       }
 
       function bindDragEvents() {
         document.querySelectorAll(".task-card").forEach((card) => {
           card.addEventListener("dragstart", (e) => {
             draggedTaskId = card.dataset.id;
+            dropHandled = false;
             card.classList.add("dragging");
             e.dataTransfer.effectAllowed = "move";
             e.dataTransfer.setData("text/plain", draggedTaskId);
@@ -882,6 +1154,10 @@
               .querySelectorAll(".column")
               .forEach((col) => col.classList.remove("drag-over"));
             trashZone.classList.remove("trash-active");
+
+            if (!dropHandled) {
+              render();
+            }
           });
         });
 
@@ -891,21 +1167,50 @@
             column.classList.add("drag-over");
           });
 
-          column.addEventListener("dragleave", () => {
-            column.classList.remove("drag-over");
+          column.addEventListener("dragleave", (e) => {
+            if (!column.contains(e.relatedTarget)) {
+              column.classList.remove("drag-over");
+            }
+          });
+        });
+
+        document.querySelectorAll(".task-list").forEach((list) => {
+          list.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            const draggingCard = document.querySelector(".task-card.dragging");
+            if (!draggingCard) return;
+
+            const emptyState = list.querySelector(".empty-state");
+            if (emptyState) emptyState.classList.add("hidden");
+
+            const afterElement = getDragAfterElement(list, e.clientY);
+            if (afterElement == null) {
+              list.appendChild(draggingCard);
+            } else {
+              list.insertBefore(draggingCard, afterElement);
+            }
+
+            syncEmptyStates();
           });
 
-          column.addEventListener("drop", (e) => {
+          list.addEventListener("drop", (e) => {
             e.preventDefault();
+            dropHandled = true;
+
             const taskId =
               e.dataTransfer.getData("text/plain") || draggedTaskId;
-            const status = column.dataset.status;
+            const status = list.dataset.status;
+            const orderedIds = [...list.querySelectorAll(".task-card")].map(
+              (card) => card.dataset.id,
+            );
 
-            column.classList.remove("drag-over");
+            document
+              .querySelectorAll(".column")
+              .forEach((col) => col.classList.remove("drag-over"));
             trashZone.classList.remove("trash-active");
 
             if (taskId && status) {
-              updateTaskStatus(taskId, status);
+              applyTaskDrop(taskId, status, orderedIds);
             }
           });
         });
@@ -976,6 +1281,7 @@
             priority,
             due,
             createdAt: Date.now(),
+            order: Date.now(),
           });
 
           showToast("Đã thêm công việc mới.");
@@ -1014,6 +1320,49 @@
 
       confirmModal.addEventListener("click", (e) => {
         if (e.target === confirmModal) closeConfirmModal();
+      });
+
+      taskDueDisplay.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (datePickerPanel.classList.contains("hidden")) {
+          openDatePicker();
+        } else {
+          closeDatePicker();
+        }
+      });
+
+      prevMonthBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        datePickerMonth.setMonth(datePickerMonth.getMonth() - 1);
+        renderDatePicker();
+      });
+
+      nextMonthBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        datePickerMonth.setMonth(datePickerMonth.getMonth() + 1);
+        renderDatePicker();
+      });
+
+      clearDateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        taskDue.value = "";
+        updateDueDisplay();
+        closeDatePicker();
+      });
+
+      todayDateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        taskDue.value = toDateValue(new Date());
+        updateDueDisplay();
+        closeDatePicker();
+      });
+
+      datePickerPanel.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+
+      document.addEventListener("click", () => {
+        closeDatePicker();
       });
 
       searchInput.addEventListener("input", render);
