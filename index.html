@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WorkBoard - Quản lý công việc</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+            },
+            boxShadow: {
+              soft: "0 18px 60px rgba(0,0,0,0.25)",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      * {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(168, 85, 247, 0.22),
+            transparent 35%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(59, 130, 246, 0.18),
+            transparent 30%
+          ),
+          linear-gradient(135deg, #0f172a 0%, #111827 50%, #020617 100%);
+        min-height: 100vh;
+      }
+
+      .glass {
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+      }
+
+      .column-glow {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.075),
+          rgba(255, 255, 255, 0.035)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .task-card {
+        transition:
+          transform 0.22s ease,
+          box-shadow 0.22s ease,
+          border-color 0.22s ease,
+          opacity 0.18s ease;
+        cursor: grab;
+      }
+
+      .task-card:active {
+        cursor: grabbing;
+      }
+
+      .task-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.22);
+        border-color: rgba(168, 85, 247, 0.55);
+      }
+
+      .dragging {
+        opacity: 0.45;
+        transform: rotate(2deg) scale(0.98);
+      }
+
+      .drag-over {
+        outline: 2px dashed rgba(168, 85, 247, 0.75);
+        outline-offset: -8px;
+        background: rgba(168, 85, 247, 0.08);
+      }
+
+      .trash-zone {
+        transition: all 0.25s ease;
+      }
+
+      .trash-active {
+        transform: translateY(-4px) scale(1.04);
+        border-color: rgba(248, 113, 113, 0.9);
+        background: rgba(127, 29, 29, 0.38);
+        box-shadow: 0 20px 65px rgba(239, 68, 68, 0.32);
+      }
+
+      .trash-lid {
+        transform-origin: left center;
+        transition: transform 0.25s ease;
+      }
+
+      .trash-active .trash-lid {
+        transform: rotate(-20deg) translateY(-4px);
+      }
+
+      .modal-show {
+        animation: pop 0.18s ease-out;
+      }
+
+      @keyframes pop {
+        from {
+          transform: scale(0.96) translateY(10px);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1) translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .custom-scroll::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .custom-scroll::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 999px;
+      }
+
+      .custom-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+    </style>
+  </head>
+
+  <body class="font-sans text-slate-100">
+    <div class="min-h-screen px-4 py-6 md:px-8">
+      <!-- Header -->
+      <header class="glass rounded-3xl p-5 md:p-6 shadow-soft mb-6">
+        <div
+          class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between"
+        >
+          <div>
+            <div
+              class="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-500/10 px-3 py-1 text-sm text-purple-200 mb-3"
+            >
+              <span
+                class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"
+              ></span>
+              Local Storage Ready
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-black tracking-tight">
+              WorkBoard
+              <span
+                class="bg-gradient-to-r from-purple-300 via-fuchsia-300 to-blue-300 bg-clip-text text-transparent"
+              >
+                Công Việc Cá Nhân
+              </span>
+            </h1>
+
+            <p class="mt-2 text-slate-300 max-w-2xl">
+              Quản lý công việc theo 4 trạng thái: Cần Làm, Đang nghiên cứu,
+              Đang Làm, Đã Làm. Có thêm, sửa, xoá, tag, tìm kiếm, kéo thả và lưu
+              tự động trên trình duyệt.
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button
+              id="addTaskBtn"
+              class="rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 px-5 py-3 font-bold shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[.98] transition"
+            >
+              + Thêm công việc
+            </button>
+
+            <button
+              id="clearDoneBtn"
+              class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold text-slate-200 hover:bg-white/10 transition"
+            >
+              Dọn cột Đã Làm
+            </button>
+          </div>
+        </div>
+
+        <!-- Tools -->
+        <div class="mt-6 grid gap-3 md:grid-cols-[1.5fr_1fr_1fr]">
+          <div class="relative">
+            <input
+              id="searchInput"
+              type="text"
+              placeholder="Tìm công việc theo tiêu đề, mô tả, tag..."
+              class="w-full rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 pl-11 outline-none focus:border-purple-400/70"
+            />
+            <span class="absolute left-4 top-3.5 text-slate-400">⌕</span>
+          </div>
+
+          <select
+            id="tagFilter"
+            class="rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 outline-none focus:border-purple-400/70"
+          >
+            <option value="all">Tất cả tag</option>
+            <option value="bug">Bug</option>
+            <option value="nâng cấp">Nâng cấp</option>
+            <option value="quan trọng">Quan trọng</option>
+            <option value="ý tưởng">Ý tưởng</option>
+            <option value="thiết kế">Thiết kế</option>
+            <option value="backend">Backend</option>
+            <option value="frontend">Frontend</option>
+          </select>
+
+          <select
+            id="sortSelect"
+            class="rounded-2xl border border-white/10 bg-slate-950/45 px-4 py-3 outline-none focus:border-purple-400/70"
+          >
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+            <option value="priority">Ưu tiên cao</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Stats -->
+      <section
+        id="stats"
+        class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+      ></section>
+
+      <!-- Board -->
+      <main
+        id="board"
+        class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 pb-32"
+      ></main>
+
+      <!-- Trash -->
+      <div class="fixed bottom-5 left-1/2 z-30 -translate-x-1/2">
+        <div
+          id="trashZone"
+          class="trash-zone glass flex items-center gap-4 rounded-3xl px-6 py-4 shadow-soft border border-red-400/30"
+        >
+          <div class="relative h-12 w-12">
+            <div
+              class="trash-lid absolute left-2 top-1 h-2 w-8 rounded bg-red-300"
+            ></div>
+            <div
+              class="absolute left-3 top-4 h-8 w-7 rounded-b-lg border-2 border-red-300"
+            ></div>
+            <div
+              class="absolute left-[22px] top-5 h-6 w-[2px] bg-red-300/80"
+            ></div>
+            <div
+              class="absolute left-[14px] top-5 h-6 w-[2px] bg-red-300/80"
+            ></div>
+            <div
+              class="absolute left-[30px] top-5 h-6 w-[2px] bg-red-300/80"
+            ></div>
+          </div>
+          <div>
+            <p class="font-bold text-red-100">Thùng rác</p>
+            <p class="text-xs text-red-200/80">Kéo công việc vào đây để xoá</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div
+      id="taskModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/65 px-4"
+    >
+      <div
+        class="modal-show glass w-full max-w-2xl rounded-3xl p-6 shadow-soft"
+      >
+        <div class="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <h2 id="modalTitle" class="text-2xl font-black">Thêm công việc</h2>
+            <p class="text-sm text-slate-400 mt-1">
+              Nhập thông tin công việc bên dưới.
+            </p>
+          </div>
+
+          <button
+            id="closeModalBtn"
+            class="rounded-xl border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10 transition"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form id="taskForm" class="space-y-4">
+          <input type="hidden" id="taskId" />
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-slate-300"
+              >Tiêu đề</label
+            >
+            <input
+              id="taskTitle"
+              required
+              maxlength="80"
+              type="text"
+              placeholder="Ví dụ: Fix lỗi đăng nhập..."
+              class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+            />
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-slate-300"
+              >Mô tả</label
+            >
+            <textarea
+              id="taskDesc"
+              rows="4"
+              maxlength="350"
+              placeholder="Mô tả ngắn về công việc..."
+              class="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+            ></textarea>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-300"
+                >Trạng thái</label
+              >
+              <select
+                id="taskStatus"
+                class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+              >
+                <option value="todo">Cần Làm</option>
+                <option value="research">Đang nghiên cứu</option>
+                <option value="doing">Đang Làm</option>
+                <option value="done">Đã Làm</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-300"
+                >Tag</label
+              >
+              <select
+                id="taskTag"
+                class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+              >
+                <option value="bug">Bug</option>
+                <option value="nâng cấp">Nâng cấp</option>
+                <option value="quan trọng">Quan trọng</option>
+                <option value="ý tưởng">Ý tưởng</option>
+                <option value="thiết kế">Thiết kế</option>
+                <option value="backend">Backend</option>
+                <option value="frontend">Frontend</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-300"
+                >Ưu tiên</label
+              >
+              <select
+                id="taskPriority"
+                class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+              >
+                <option value="low">Thấp</option>
+                <option value="medium">Trung bình</option>
+                <option value="high">Cao</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-2 block text-sm font-semibold text-slate-300"
+              >Deadline</label
+            >
+            <input
+              id="taskDue"
+              type="date"
+              class="w-full rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-3 outline-none focus:border-purple-400/70"
+            />
+          </div>
+
+          <div
+            class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-3"
+          >
+            <button
+              type="button"
+              id="cancelModalBtn"
+              class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold hover:bg-white/10 transition"
+            >
+              Huỷ
+            </button>
+
+            <button
+              type="submit"
+              class="rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 px-5 py-3 font-bold shadow-lg shadow-purple-900/30 hover:scale-[1.02] active:scale-[.98] transition"
+            >
+              Lưu công việc
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div
+      id="confirmModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 px-4"
+    >
+      <div class="modal-show glass w-full max-w-md rounded-3xl p-6 shadow-soft">
+        <div
+          class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/15 text-3xl"
+        >
+          🗑️
+        </div>
+
+        <h2 id="confirmTitle" class="text-2xl font-black">Xác nhận xoá</h2>
+        <p id="confirmText" class="mt-2 text-slate-300">
+          Bạn có chắc muốn xoá công việc này không?
+        </p>
+
+        <div
+          class="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3"
+        >
+          <button
+            id="cancelDeleteBtn"
+            class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-semibold hover:bg-white/10 transition"
+          >
+            Huỷ
+          </button>
+
+          <button
+            id="confirmDeleteBtn"
+            class="rounded-2xl bg-red-500 px-5 py-3 font-bold text-white hover:bg-red-400 transition"
+          >
+            Xoá
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div
+      id="toast"
+      class="fixed right-5 top-5 z-[60] hidden rounded-2xl border border-white/10 bg-slate-950/90 px-5 py-3 text-sm shadow-soft"
+    ></div>
+
+    <script>
+      const STORAGE_KEY = "workboard_tasks_v1";
+
+      const columns = [
+        {
+          id: "todo",
+          title: "Cần Làm",
+          icon: "📌",
+          color: "from-slate-400 to-slate-200",
+          hint: "Việc mới, cần xử lý",
+        },
+        {
+          id: "research",
+          title: "Đang nghiên cứu",
+          icon: "🔎",
+          color: "from-cyan-400 to-blue-300",
+          hint: "Đang tìm hiểu, phân tích",
+        },
+        {
+          id: "doing",
+          title: "Đang Làm",
+          icon: "⚡",
+          color: "from-purple-400 to-fuchsia-300",
+          hint: "Đang thực hiện",
+        },
+        {
+          id: "done",
+          title: "Đã Làm",
+          icon: "✅",
+          color: "from-emerald-400 to-lime-300",
+          hint: "Hoàn thành",
+        },
+      ];
+
+      const tagStyles = {
+        bug: "bg-red-500/15 text-red-200 border-red-400/30",
+        "nâng cấp": "bg-blue-500/15 text-blue-200 border-blue-400/30",
+        "quan trọng": "bg-amber-500/15 text-amber-200 border-amber-400/30",
+        "ý tưởng": "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/30",
+        "thiết kế": "bg-pink-500/15 text-pink-200 border-pink-400/30",
+        backend: "bg-emerald-500/15 text-emerald-200 border-emerald-400/30",
+        frontend: "bg-cyan-500/15 text-cyan-200 border-cyan-400/30",
+      };
+
+      const priorityStyles = {
+        low: {
+          text: "Thấp",
+          className: "bg-slate-500/15 text-slate-200 border-slate-400/25",
+        },
+        medium: {
+          text: "TB",
+          className: "bg-yellow-500/15 text-yellow-200 border-yellow-400/25",
+        },
+        high: {
+          text: "Cao",
+          className: "bg-red-500/15 text-red-200 border-red-400/25",
+        },
+      };
+
+      let tasks = [];
+      let taskToDelete = null;
+      let pendingConfirmAction = null;
+      let draggedTaskId = null;
+
+      const board = document.getElementById("board");
+      const stats = document.getElementById("stats");
+      const taskModal = document.getElementById("taskModal");
+      const confirmModal = document.getElementById("confirmModal");
+      const taskForm = document.getElementById("taskForm");
+      const toast = document.getElementById("toast");
+      const trashZone = document.getElementById("trashZone");
+
+      const addTaskBtn = document.getElementById("addTaskBtn");
+      const clearDoneBtn = document.getElementById("clearDoneBtn");
+      const closeModalBtn = document.getElementById("closeModalBtn");
+      const cancelModalBtn = document.getElementById("cancelModalBtn");
+      const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+      const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
+      const searchInput = document.getElementById("searchInput");
+      const tagFilter = document.getElementById("tagFilter");
+      const sortSelect = document.getElementById("sortSelect");
+
+      function uid() {
+        return "task_" + Date.now() + "_" + Math.random().toString(16).slice(2);
+      }
+
+      function loadTasks() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+
+        if (!raw) {
+          tasks = [
+            {
+              id: uid(),
+              title: "Thiết kế giao diện quản lý công việc",
+              desc: "Tạo layout 4 cột, giao diện đẹp, có kéo thả mượt.",
+              status: "doing",
+              tag: "thiết kế",
+              priority: "high",
+              due: "",
+              createdAt: Date.now() - 500000,
+            },
+            {
+              id: uid(),
+              title: "Thêm lưu dữ liệu Local Storage",
+              desc: "Dữ liệu không mất khi tải lại trang.",
+              status: "todo",
+              tag: "nâng cấp",
+              priority: "medium",
+              due: "",
+              createdAt: Date.now() - 300000,
+            },
+          ];
+          saveTasks();
+          return;
+        }
+
+        try {
+          tasks = JSON.parse(raw) || [];
+        } catch {
+          tasks = [];
+        }
+      }
+
+      function saveTasks() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      }
+
+      function showToast(message, type = "success") {
+        toast.textContent = message;
+        toast.className =
+          "fixed right-5 top-5 z-[60] rounded-2xl border px-5 py-3 text-sm shadow-soft " +
+          (type === "error"
+            ? "border-red-400/30 bg-red-950/90 text-red-100"
+            : "border-emerald-400/30 bg-slate-950/90 text-emerald-100");
+
+        toast.classList.remove("hidden");
+
+        setTimeout(() => {
+          toast.classList.add("hidden");
+        }, 2200);
+      }
+
+      function escapeHTML(str = "") {
+        return str
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function formatDate(dateString) {
+        if (!dateString) return "";
+        const date = new Date(dateString + "T00:00:00");
+        return date.toLocaleDateString("vi-VN");
+      }
+
+      function isOverdue(task) {
+        if (!task.due || task.status === "done") return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const due = new Date(task.due + "T00:00:00");
+        return due < today;
+      }
+
+      function getFilteredTasks() {
+        const keyword = searchInput.value.trim().toLowerCase();
+        const selectedTag = tagFilter.value;
+        const sort = sortSelect.value;
+
+        let result = tasks.filter((task) => {
+          const matchesKeyword =
+            task.title.toLowerCase().includes(keyword) ||
+            (task.desc || "").toLowerCase().includes(keyword) ||
+            task.tag.toLowerCase().includes(keyword);
+
+          const matchesTag = selectedTag === "all" || task.tag === selectedTag;
+
+          return matchesKeyword && matchesTag;
+        });
+
+        result.sort((a, b) => {
+          if (sort === "oldest") return a.createdAt - b.createdAt;
+
+          if (sort === "priority") {
+            const order = { high: 3, medium: 2, low: 1 };
+            return order[b.priority] - order[a.priority];
+          }
+
+          return b.createdAt - a.createdAt;
+        });
+
+        return result;
+      }
+
+      function renderStats() {
+        stats.innerHTML = columns
+          .map((col) => {
+            const count = tasks.filter((t) => t.status === col.id).length;
+
+            return `
+          <div class="glass rounded-3xl p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-slate-400">${col.title}</p>
+                <p class="mt-1 text-3xl font-black">${count}</p>
+              </div>
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/8 text-2xl">
+                ${col.icon}
+              </div>
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      function renderBoard() {
+        const filteredTasks = getFilteredTasks();
+
+        board.innerHTML = columns
+          .map((col) => {
+            const colTasks = filteredTasks.filter(
+              (task) => task.status === col.id,
+            );
+
+            return `
+          <section
+            class="column column-glow min-h-[540px] rounded-3xl p-4"
+            data-status="${col.id}"
+          >
+            <div class="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 class="flex items-center gap-2 text-xl font-black">
+                  <span>${col.icon}</span>
+                  <span>${col.title}</span>
+                </h2>
+                <p class="mt-1 text-sm text-slate-400">${col.hint}</p>
+              </div>
+
+              <span class="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm font-bold">
+                ${colTasks.length}
+              </span>
+            </div>
+
+            <div class="task-list custom-scroll min-h-[430px] space-y-3 overflow-y-auto pr-1" data-status="${col.id}">
+              ${
+                colTasks.length
+                  ? colTasks.map(renderTaskCard).join("")
+                  : `
+                    <div class="rounded-3xl border border-dashed border-white/10 bg-white/[0.03] p-6 text-center text-slate-500">
+                      <div class="text-3xl mb-2">✨</div>
+                      <p class="text-sm">Chưa có công việc</p>
+                    </div>
+                  `
+              }
+            </div>
+          </section>
+        `;
+          })
+          .join("");
+
+        bindDragEvents();
+      }
+
+      function renderTaskCard(task) {
+        const tagClass =
+          tagStyles[task.tag] ||
+          "bg-slate-500/15 text-slate-200 border-slate-400/25";
+        const priority = priorityStyles[task.priority] || priorityStyles.low;
+        const overdue = isOverdue(task);
+
+        return `
+        <article
+          class="task-card rounded-3xl border border-white/10 bg-slate-950/50 p-4"
+          draggable="true"
+          data-id="${task.id}"
+        >
+          <div class="mb-3 flex items-start justify-between gap-3">
+            <h3 class="line-clamp-2 text-base font-extrabold text-slate-100">
+              ${escapeHTML(task.title)}
+            </h3>
+
+            <div class="flex shrink-0 gap-1">
+              <button
+                class="edit-btn rounded-xl bg-white/5 px-2 py-1 text-sm hover:bg-purple-500/20 transition"
+                data-id="${task.id}"
+                title="Sửa"
+              >
+                ✏️
+              </button>
+            </div>
+          </div>
+
+          ${
+            task.desc
+              ? `<p class="mb-4 line-clamp-3 text-sm leading-6 text-slate-400">${escapeHTML(task.desc)}</p>`
+              : `<p class="mb-4 text-sm italic text-slate-600">Không có mô tả</p>`
+          }
+
+          <div class="mb-3 flex flex-wrap gap-2">
+            <span class="rounded-full border px-3 py-1 text-xs font-bold ${tagClass}">
+              ${escapeHTML(task.tag)}
+            </span>
+
+            <span class="rounded-full border px-3 py-1 text-xs font-bold ${priority.className}">
+              Ưu tiên ${priority.text}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-white/10 pt-3 text-xs">
+            <span class="${overdue ? "text-red-300 font-bold" : "text-slate-500"}">
+              ${task.due ? (overdue ? "Quá hạn: " : "Deadline: ") + formatDate(task.due) : "Chưa có deadline"}
+            </span>
+
+            <span class="text-slate-500">
+              #${task.id.slice(-4)}
+            </span>
+          </div>
+        </article>
+      `;
+      }
+
+      function render() {
+        renderStats();
+        renderBoard();
+      }
+
+      function openTaskModal(task = null) {
+        document.getElementById("modalTitle").textContent = task
+          ? "Sửa công việc"
+          : "Thêm công việc";
+        document.getElementById("taskId").value = task?.id || "";
+        document.getElementById("taskTitle").value = task?.title || "";
+        document.getElementById("taskDesc").value = task?.desc || "";
+        document.getElementById("taskStatus").value = task?.status || "todo";
+        document.getElementById("taskTag").value = task?.tag || "bug";
+        document.getElementById("taskPriority").value =
+          task?.priority || "medium";
+        document.getElementById("taskDue").value = task?.due || "";
+
+        taskModal.classList.remove("hidden");
+        taskModal.classList.add("flex");
+
+        setTimeout(() => {
+          document.getElementById("taskTitle").focus();
+        }, 80);
+      }
+
+      function closeTaskModal() {
+        taskModal.classList.add("hidden");
+        taskModal.classList.remove("flex");
+        taskForm.reset();
+      }
+
+      function openConfirmModal(options = {}) {
+        const { mode = "single", taskId = null } = options;
+
+        const confirmTitle = document.getElementById("confirmTitle");
+        const confirmText = document.getElementById("confirmText");
+        const confirmButton = document.getElementById("confirmDeleteBtn");
+
+        if (mode === "clearDone") {
+          const doneTasks = tasks.filter((t) => t.status === "done");
+
+          if (!doneTasks.length) {
+            showToast("Cột Đã Làm đang trống.", "error");
+            return;
+          }
+
+          taskToDelete = null;
+          pendingConfirmAction = "clearDone";
+          confirmTitle.textContent = "Dọn cột Đã Làm";
+          confirmText.innerHTML = `Bạn có chắc muốn xoá <b class="text-red-200">${doneTasks.length}</b> công việc trong cột <b class="text-red-200">Đã Làm</b> không? Hành động này không thể hoàn tác.`;
+          confirmButton.textContent = "Dọn cột";
+        } else {
+          const task = tasks.find((t) => t.id === taskId);
+          if (!task) return;
+
+          taskToDelete = taskId;
+          pendingConfirmAction = "deleteSingle";
+          confirmTitle.textContent = "Xác nhận xoá";
+          confirmText.innerHTML = `Bạn có chắc muốn xoá công việc <b class="text-red-200">"${escapeHTML(task.title)}"</b> không? Hành động này không thể hoàn tác.`;
+          confirmButton.textContent = "Xoá";
+        }
+
+        confirmModal.classList.remove("hidden");
+        confirmModal.classList.add("flex");
+      }
+
+      function closeConfirmModal() {
+        taskToDelete = null;
+        pendingConfirmAction = null;
+        confirmModal.classList.add("hidden");
+        confirmModal.classList.remove("flex");
+      }
+
+      function deleteTask(taskId) {
+        tasks = tasks.filter((task) => task.id !== taskId);
+        saveTasks();
+        render();
+        showToast("Đã xoá công việc.");
+      }
+
+      function updateTaskStatus(taskId, status) {
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        task.status = status;
+        saveTasks();
+        render();
+        showToast(
+          `Đã chuyển sang "${columns.find((c) => c.id === status)?.title}".`,
+        );
+      }
+
+      function bindDragEvents() {
+        document.querySelectorAll(".task-card").forEach((card) => {
+          card.addEventListener("dragstart", (e) => {
+            draggedTaskId = card.dataset.id;
+            card.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", draggedTaskId);
+          });
+
+          card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            draggedTaskId = null;
+            document
+              .querySelectorAll(".column")
+              .forEach((col) => col.classList.remove("drag-over"));
+            trashZone.classList.remove("trash-active");
+          });
+        });
+
+        document.querySelectorAll(".column").forEach((column) => {
+          column.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            column.classList.add("drag-over");
+          });
+
+          column.addEventListener("dragleave", () => {
+            column.classList.remove("drag-over");
+          });
+
+          column.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const taskId =
+              e.dataTransfer.getData("text/plain") || draggedTaskId;
+            const status = column.dataset.status;
+
+            column.classList.remove("drag-over");
+            trashZone.classList.remove("trash-active");
+
+            if (taskId && status) {
+              updateTaskStatus(taskId, status);
+            }
+          });
+        });
+
+        document.querySelectorAll(".edit-btn").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const task = tasks.find((t) => t.id === btn.dataset.id);
+            if (task) openTaskModal(task);
+          });
+        });
+      }
+
+      trashZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        trashZone.classList.add("trash-active");
+      });
+
+      trashZone.addEventListener("dragleave", () => {
+        trashZone.classList.remove("trash-active");
+      });
+
+      trashZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        trashZone.classList.remove("trash-active");
+
+        const taskId = e.dataTransfer.getData("text/plain") || draggedTaskId;
+        if (taskId) {
+          openConfirmModal({ mode: "single", taskId });
+        }
+      });
+
+      taskForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const id = document.getElementById("taskId").value;
+        const title = document.getElementById("taskTitle").value.trim();
+        const desc = document.getElementById("taskDesc").value.trim();
+        const status = document.getElementById("taskStatus").value;
+        const tag = document.getElementById("taskTag").value;
+        const priority = document.getElementById("taskPriority").value;
+        const due = document.getElementById("taskDue").value;
+
+        if (!title) {
+          showToast("Vui lòng nhập tiêu đề công việc.", "error");
+          return;
+        }
+
+        if (id) {
+          const task = tasks.find((t) => t.id === id);
+          if (task) {
+            task.title = title;
+            task.desc = desc;
+            task.status = status;
+            task.tag = tag;
+            task.priority = priority;
+            task.due = due;
+          }
+
+          showToast("Đã cập nhật công việc.");
+        } else {
+          tasks.push({
+            id: uid(),
+            title,
+            desc,
+            status,
+            tag,
+            priority,
+            due,
+            createdAt: Date.now(),
+          });
+
+          showToast("Đã thêm công việc mới.");
+        }
+
+        saveTasks();
+        closeTaskModal();
+        render();
+      });
+
+      addTaskBtn.addEventListener("click", () => openTaskModal());
+      closeModalBtn.addEventListener("click", closeTaskModal);
+      cancelModalBtn.addEventListener("click", closeTaskModal);
+
+      taskModal.addEventListener("click", (e) => {
+        if (e.target === taskModal) closeTaskModal();
+      });
+
+      cancelDeleteBtn.addEventListener("click", closeConfirmModal);
+
+      confirmDeleteBtn.addEventListener("click", () => {
+        if (pendingConfirmAction === "deleteSingle" && taskToDelete) {
+          deleteTask(taskToDelete);
+        }
+
+        if (pendingConfirmAction === "clearDone") {
+          const doneCount = tasks.filter((t) => t.status === "done").length;
+          tasks = tasks.filter((t) => t.status !== "done");
+          saveTasks();
+          render();
+          showToast(`Đã dọn ${doneCount} công việc trong cột Đã Làm.`);
+        }
+
+        closeConfirmModal();
+      });
+
+      confirmModal.addEventListener("click", (e) => {
+        if (e.target === confirmModal) closeConfirmModal();
+      });
+
+      searchInput.addEventListener("input", render);
+      tagFilter.addEventListener("change", render);
+      sortSelect.addEventListener("change", render);
+
+      clearDoneBtn.addEventListener("click", () => {
+        openConfirmModal({ mode: "clearDone" });
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeTaskModal();
+          closeConfirmModal();
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          searchInput.focus();
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") {
+          e.preventDefault();
+          openTaskModal();
+        }
+      });
+
+      loadTasks();
+      render();
+    </script>
+  </body>
+</html>
